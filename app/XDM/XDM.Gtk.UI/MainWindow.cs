@@ -372,7 +372,6 @@ namespace XDM.GtkUI
             return button;
         }
 
-        private Label lblSpeedIndicator;
 
         private Widget CreateBottombar()
         {
@@ -392,16 +391,6 @@ namespace XDM.GtkUI
             btnScheduler.Clicked += BtnScheduler_Clicked;
             hbox.PackStart(btnScheduler, false, false, 0);
 
-            // Speed indicator (right-aligned)
-            lblSpeedIndicator = new Label
-            {
-                Text = "",
-                Xalign = 1.0f,
-                MarginEnd = 10
-            };
-            lblSpeedIndicator.StyleContext.AddClass("medium-font");
-            hbox.PackEnd(lblSpeedIndicator, false, false, 0);
-
             helpImage = new Image(LoadSvg("question-line", 16));
             helpLabel = new Label { Text = TextResource.GetText("LBL_SUPPORT_PAGE") };
             btnHelp = CreateButtonWithContent(helpImage, helpLabel);
@@ -409,49 +398,7 @@ namespace XDM.GtkUI
             hbox.PackEnd(btnHelp, false, false, 0);
 
             hbox.ShowAll();
-
-            // Update speed indicator every 2 seconds
-            GLib.Timeout.Add(2000, () =>
-            {
-                UpdateSpeedIndicator();
-                return true;
-            });
-
             return hbox;
-        }
-
-        private void UpdateSpeedIndicator()
-        {
-            try
-            {
-                var downloads = GetAllInProgressDownloads();
-                var activeCount = 0;
-                var totalDisplay = "";
-                foreach (var dl in downloads)
-                {
-                    if (!string.IsNullOrEmpty(dl.DownloadSpeed) && dl.DownloadSpeed != "---")
-                    {
-                        activeCount++;
-                        totalDisplay = dl.DownloadSpeed; // Show last active speed
-                    }
-                }
-                if (activeCount == 0)
-                {
-                    lblSpeedIndicator.Text = "";
-                }
-                else if (activeCount == 1)
-                {
-                    lblSpeedIndicator.Text = $"⬇ {totalDisplay}";
-                }
-                else
-                {
-                    lblSpeedIndicator.Text = $"⬇ {activeCount} active downloads";
-                }
-            }
-            catch
-            {
-                lblSpeedIndicator.Text = "";
-            }
         }
 
         private void BtnHelp_Clicked(object? sender, EventArgs e)

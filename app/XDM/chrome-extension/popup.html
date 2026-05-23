@@ -9,50 +9,41 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 
-<body>
-  <!-- Header with connection status -->
-  <div class="popup-header">
-    <div class="header-brand">
-      <span class="header-icon">⬇</span>
-      <span>XDM Integration Module</span>
-    </div>
-    <span id="statusDot" class="status-dot status-online" title="Connected to XDM"></span>
+<body style="min-width: 400px; font-family:helvetica,arial,courier;">
+  <div style="font-size: 18px; border-bottom: 1px solid lightgray; padding: 15px; ">
+    XDM Integration Module
   </div>
+  <div>
+    <div id="content">
+      <div id="list" style="min-height: 200px; max-height: 400px; overflow: hidden; overflow-y: auto;">
 
-  <!-- Loading state (shown while connecting) -->
-  <div id="loading" class="loading-container" style="display: none;">
-    <div class="spinner"></div>
-    <span class="loading-text">Connecting to XDM...</span>
-  </div>
+        <table id="table"
+          style="overflow-y: auto;background: white; margin: 0px; padding: 0px;font-family:helvetica,arial,courier;">
+        </table>
 
-  <!-- Main content -->
-  <div id="content">
-    <!-- Empty state (shown when no videos) -->
-    <div id="emptyState" class="empty-state" style="display: none;">
-      <div class="empty-state-icon">🎬</div>
-      <div class="empty-state-text">No videos detected yet.<br>Play a video in the browser to see it here.</div>
-    </div>
+      </div>
+      <div style="padding: 5px; display: flex;">
+        <button id="format" style="flex: 1;" class="flat-button">More formats</button>
+        <div style="padding: 5px;">
+          <div style="width: 1px; background: rgb(230,230,230); height: 20px;">
 
-    <!-- Video list -->
-    <div id="list" class="video-list">
-      <table id="table"></table>
-    </div>
-
-    <!-- Action buttons -->
-    <div class="action-bar">
-      <button id="format" class="flat-button" aria-label="Show more video formats">More formats</button>
-      <div class="action-divider"></div>
-      <button id="clear" class="flat-button" aria-label="Clear all detected videos">Clear items</button>
+          </div>
+        </div>
+        <button id="clear" style="flex: 1;" class="flat-button">Clear items</button>
+      </div>
     </div>
   </div>
-
-  <!-- Footer with monitoring toggle -->
-  <div class="popup-footer">
-    <span class="footer-label">Browser monitoring</span>
-    <label class="toggle-switch" aria-label="Toggle browser download monitoring">
-      <input type="checkbox" id="chk">
-      <span class="toggle-slider"></span>
-    </label>
+  <div
+    style="font-size: 14px; padding-top: 5px; background-color: rgb(240,240,240);border-top: 1px solid rgb(200,200,200);">
+    <div>
+      <div
+        style="display: flex; justify-content: space-between; padding: 20px; padding-top: 10px; padding-bottom: 10px;">
+        <label class="container">Browser monitoring
+          <input type="checkbox" id="chk" aria-label="Toggle browser download monitoring">
+          <span class="checkmark"></span>
+        </label>
+      </div>
+    </div>
   </div>
 </body>
 

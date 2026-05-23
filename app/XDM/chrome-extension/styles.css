@@ -1,379 +1,108 @@
-/* ===== XDM Extension — Modern Dark Theme ===== */
-
-/* --- CSS Variables for theming --- */
-:root {
-  --bg-primary: #1e1e2e;
-  --bg-secondary: #2a2a3d;
-  --bg-surface: #313145;
-  --bg-hover: #3b3b55;
-  --text-primary: #e0e0f0;
-  --text-secondary: #a0a0c0;
-  --text-muted: #707090;
-  --accent: #6c8cff;
-  --accent-hover: #8aa4ff;
-  --accent-glow: rgba(108, 140, 255, 0.15);
-  --border: #3a3a50;
-  --danger: #ff6b6b;
-  --success: #4ecdc4;
-  --warning: #ffd166;
-  --radius: 8px;
-  --transition: 0.2s ease;
+html body{
+    padding: 0px;
+    margin: 0px;
 }
 
-/* Light mode override */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5fa;
-    --bg-surface: #eeeef4;
-    --bg-hover: #e0e0ea;
-    --text-primary: #1a1a2e;
-    --text-secondary: #555570;
-    --text-muted: #888898;
-    --accent: #4a6cf7;
-    --accent-hover: #3a5ce5;
-    --accent-glow: rgba(74, 108, 247, 0.1);
-    --border: #d0d0e0;
+.flat-button{
+    border:none;
+    background: white;
+}
+
+.flat-button:hover{
+    background: rgb(240,240,240);
+}
+
+table tbody{
+    width: 100%;
+    display: table;
+}
+
+/* The container */
+.container {
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
-}
+  
+  /* Hide the browser's default checkbox */
+  .container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+  }
+  
+  /* Create a custom checkbox */
+  .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 16px;
+    width: 16px;
+    background-color: rgb(200,200,200);
+  }
+  
+  /* On mouse-over, add a grey background color */
+  .container:hover input ~ .checkmark {
+    background-color: #ccc;
+  }
+  
+  /* When the checkbox is checked, add a blue background */
+  .container input:checked ~ .checkmark {
+    background-color: #2196F3;
+  }
+  
+  /* Create the checkmark/indicator (hidden when not checked) */
+  .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+  }
+  
+  /* Show the checkmark when checked */
+  .container input:checked ~ .checkmark:after {
+    display: block;
+  }
+  
+  /* Style the checkmark/indicator */
+  .container .checkmark:after {
+    left: 4px;
+    top: 0px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    -webkit-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    transform: rotate(45deg);
+  }
 
-/* --- Reset --- */
-* {
-  box-sizing: border-box;
-}
+  .primary-button{
+    padding: 10px;
+    background: #2196F3;
+    color: white;
+    border-radius: 3px;
+    border: none;
+    text-decoration: none;
+  }
 
-html, body {
-  padding: 0;
-  margin: 0;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  min-width: 380px;
-}
+  .primary-button:hover{
+    background: #2d99f1;
+  }
 
-/* --- Header --- */
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-.header-icon {
-  font-size: 18px;
-  color: var(--accent);
-}
-
-/* --- Connection Status Dot --- */
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.status-online {
-  background: var(--success);
-  box-shadow: 0 0 6px var(--success);
-  animation: pulse 2s infinite;
-}
-
-.status-offline {
-  background: var(--danger);
-  box-shadow: 0 0 6px var(--danger);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* --- Video List --- */
-.video-list {
-  min-height: 120px;
-  max-height: 360px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-hover) transparent;
-}
-
-.video-list::-webkit-scrollbar {
-  width: 5px;
-}
-
-.video-list::-webkit-scrollbar-thumb {
-  background: var(--bg-hover);
-  border-radius: 3px;
-}
-
-/* --- Table --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  padding: 0;
-  background: var(--bg-primary);
-}
-
-table tr {
-  border-bottom: 1px solid var(--border);
-  transition: background var(--transition);
-  cursor: default;
-}
-
-table tr:hover {
-  background: var(--accent-glow);
-}
-
-table td {
-  padding: 10px 14px;
-  font-size: 13px;
-  color: var(--text-primary);
-  vertical-align: middle;
-}
-
-table td:first-child {
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Download button in table */
-table td button,
-table td a {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 5px 14px;
-  border-radius: var(--radius);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background var(--transition), transform var(--transition);
-}
-
-table td button:hover,
-table td a:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-}
-
-/* --- Empty State --- */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
-  gap: 8px;
-}
-
-.empty-state-icon {
-  font-size: 36px;
-  opacity: 0.5;
-}
-
-.empty-state-text {
-  font-size: 13px;
-  text-align: center;
-}
-
-/* --- Action Bar --- */
-.action-bar {
-  display: flex;
-  border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
-}
-
-.flat-button {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  padding: 10px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background var(--transition), color var(--transition);
-}
-
-.flat-button:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.action-divider {
-  width: 1px;
-  background: var(--border);
-  margin: 6px 0;
-}
-
-/* --- Footer / Toggle --- */
-.popup-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
-}
-
-.footer-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* --- Modern Toggle Switch --- */
-.toggle-switch {
-  position: relative;
-  width: 42px;
-  height: 24px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-hover);
-  border-radius: 24px;
-  transition: background var(--transition);
-}
-
-.toggle-slider:before {
-  content: "";
-  position: absolute;
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background: #fff;
-  border-radius: 50%;
-  transition: transform var(--transition);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.toggle-switch input:checked + .toggle-slider {
-  background: var(--accent);
-}
-
-.toggle-switch input:checked + .toggle-slider:before {
-  transform: translateX(18px);
-}
-
-/* --- Error Page --- */
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 30px 20px;
-  gap: 12px;
-  text-align: center;
-}
-
-.error-icon {
-  font-size: 40px;
-  color: var(--warning);
-}
-
-.error-msg p {
-  margin: 4px 0;
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.error-hint {
-  color: var(--text-muted) !important;
-  font-size: 12px !important;
-}
-
-/* --- Primary Button --- */
-.primary-button {
-  padding: 10px 24px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: var(--radius);
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--transition), transform var(--transition);
-}
-
-.primary-button:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-}
-
-/* --- Disabled Page --- */
-.disabled-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 30px 20px;
-  gap: 8px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.disabled-icon {
-  font-size: 36px;
-  opacity: 0.5;
-}
-
-.disabled-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* --- Loading Spinner --- */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-}
-
-.spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--border);
-  border-top: 3px solid var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 13px;
-  color: var(--text-muted);
-}
+  .error-msg{
+    border: solid 20px salmon;
+    border-width: 0px 0px 0px 5px;
+    background-color: pink;
+    padding: 10px 20px;
+    font-size: 16px;
+    color: maroon;
+  }
