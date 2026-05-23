@@ -25,12 +25,18 @@
         "nativeMessaging"
     ],
     "background": {
-        "service_worker": "main.js",
+        "scripts": ["main.js"],
         "type": "module"
     },
     "icons": {
         "16": "icon16.png",
         "48": "icon48.png",
         "128": "icon128.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "xdm-v8-browser-helper@subhra74.github.io",
+            "strict_min_version": "109.0"
+        }
     }
 }

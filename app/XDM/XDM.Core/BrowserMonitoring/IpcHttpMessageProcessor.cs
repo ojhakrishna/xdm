@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Net;
 using System.Linq;
@@ -122,6 +122,28 @@ namespace XDM.Core.BrowserMonitoring
             {
                 return;
             }
+
+            // Server-side filtering: block thumbnail MIME types
+            if (IsBlockedMimeType(msg.ResponseHeaders))
+            {
+                Log.Debug($"Blocked download (MIME type): {msg.Url}");
+                return;
+            }
+
+            // Server-side filtering: block known CDN thumbnail URL patterns
+            if (IsBlockedUrlPattern(msg.Url))
+            {
+                Log.Debug($"Blocked download (URL pattern): {msg.Url}");
+                return;
+            }
+
+            // Server-side filtering: enforce minimum download size
+            if (IsBelowMinimumSize(msg.ResponseHeaders))
+            {
+                Log.Debug($"Blocked download (below min size): {msg.Url}");
+                return;
+            }
+
             var dmsg = new Message();
             dmsg.Url = msg.Url;
             dmsg.RequestMethod = msg.Method;
@@ -361,6 +383,25 @@ namespace XDM.Core.BrowserMonitoring
                 }
                 writer.WriteEndArray();
 
+                writer.WritePropertyName("blockedMimeTypes");
+                writer.WriteStartArray();
+                foreach (var mime in Config.Instance.BlockedMimeTypes)
+                {
+                    writer.WriteValue(mime);
+                }
+                writer.WriteEndArray();
+
+                writer.WritePropertyName("blockedUrlPatterns");
+                writer.WriteStartArray();
+                foreach (var pattern in Config.Instance.BlockedUrlPatterns)
+                {
+                    writer.WriteValue(pattern);
+                }
+                writer.WriteEndArray();
+
+                writer.WritePropertyName("minDownloadSize");
+                writer.WriteValue(Config.Instance.MinDownloadSizeBytes);
+
                 writer.WriteEndObject();
                 writer.Close();
                 var str = w.ToString();
@@ -391,6 +432,64 @@ namespace XDM.Core.BrowserMonitoring
                     message.RequestHeaders.Remove(keyName!);
                 }
             }
+        }
+
+        private bool IsBlockedMimeType(Dictionary<string, List<string>> responseHeaders)
+        {
+            if (responseHeaders == null) return false;
+            foreach (var key in responseHeaders.Keys)
+            {
+                if (key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    var values = responseHeaders[key];
+                    if (values != null && values.Count > 0)
+                    {
+                        var contentType = values[0].ToLowerInvariant();
+                        foreach (var blocked in Config.Instance.BlockedMimeTypes)
+                        {
+                            if (contentType.Contains(blocked.ToLowerInvariant()))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            return false;
+        }
+
+        private bool IsBlockedUrlPattern(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return false;
+            var lowerUrl = url.ToLowerInvariant();
+            foreach (var pattern in Config.Instance.BlockedUrlPatterns)
+            {
+                if (lowerUrl.Contains(pattern.ToLowerInvariant()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool IsBelowMinimumSize(Dictionary<string, List<string>> responseHeaders)
+        {
+            if (Config.Instance.MinDownloadSizeBytes <= 0) return false;
+            if (responseHeaders == null) return false;
+            foreach (var key in responseHeaders.Keys)
+            {
+                if (key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                {
+                    var values = responseHeaders[key];
+                    if (values != null && values.Count > 0 && long.TryParse(values[0], out long size))
+                    {
+                        return size > 0 && size < Config.Instance.MinDownloadSizeBytes;
+                    }
+                    break;
+                }
+            }
+            return false;
         }
     }
 }

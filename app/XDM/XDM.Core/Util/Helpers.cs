@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -79,23 +79,26 @@ namespace XDM.Core.Util
 
         public static void RunGC()
         {
-#if NET35
-            GC.Collect();
-#elif NET5_0 || NET472
+#if NET5_0_OR_GREATER
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             GCSettings.LatencyMode = GCLatencyMode.Batch;
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
-#elif NET45
+#elif NET35
+            GC.Collect();
+#elif NET45 || NET472
             GCSettings.LatencyMode = GCLatencyMode.Batch;
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
 #endif
-            //ReduceMemory();
         }
 
         static bool _toggle = true;
 
         internal static void ReduceMemory()
         {
+            if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() && !OperatingSystem.IsFreeBSD())
+            {
+                return;
+            }
             try
             {
                 Process loProcess = Process.GetCurrentProcess();
@@ -165,11 +168,7 @@ namespace XDM.Core.Util
 
         public static long TickCount()
         {
-#if NET5_0_OR_GREATER
             return Environment.TickCount64;
-#else
-            return (long)GetTickCount64();
-#endif
         }
 
         public static IEnumerable<IInProgressDownloadRow> FilterByKeyword(
@@ -272,8 +271,7 @@ namespace XDM.Core.Util
         //    return netVer;
         //}
 
-        [DllImport("kernel32.dll")]
-        public static extern UInt64 GetTickCount64();
+        // GetTickCount64 P/Invoke removed — using Environment.TickCount64 instead (available in .NET 5+)
         
         public static string MakeCookieString(Dictionary<string, string> cookies)
         {

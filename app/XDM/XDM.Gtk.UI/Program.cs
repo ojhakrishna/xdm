@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using Gtk;
 using TraceLog;
@@ -73,13 +73,8 @@ namespace XDM.GtkUI
             //                                  ");
             //Gtk.StyleContext.AddProviderForScreen(screen, provider, 800);
 
-            ServicePointManager.ServerCertificateValidationCallback += (a, b, c, d) => true;
-            ServicePointManager.DefaultConnectionLimit = 100;
-
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
-
-            AppContext.SetSwitch(DisableCachingName, true);
-            AppContext.SetSwitch(DontEnableSchUseStrongCryptoName, true);
+            // .NET 10 uses HttpClient which handles TLS and connection limits internally.
+            // ServicePointManager is deprecated and has no effect on modern HttpClient.
 
             Log.Debug("Loading languages...");
 
@@ -133,7 +128,7 @@ namespace XDM.GtkUI
             Log.Debug("Language loading ...");
             try
             {
-                var indexFile = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Lang\index.txt");
+                var indexFile = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Lang", "index.txt");
                 if (System.IO.File.Exists(indexFile))
                 {
                     var lines = System.IO.File.ReadAllLines(indexFile);

@@ -14,10 +14,17 @@ export default class App {
         this.userDisabled = false;
         this.appEnabled = false;
         this.onDownloadCreatedCallback = this.onDownloadCreated.bind(this);
-        this.onDeterminingFilenameCallback = this.onDeterminingFilename.bind(this);
         this.onTabUpdateCallback = this.onTabUpdate.bind(this);
         this.activeTabId = -1;
         this.connector = new Connector(this.onMessage.bind(this), this.onDisconnect.bind(this));
+
+        // Download filtering config from XDM server
+        this.blockedMimeTypes = [
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "image/svg+xml", "image/x-icon", "image/bmp", "image/tiff"
+        ];
+        this.blockedUrlPatterns = [];
+        this.minDownloadSize = 1048576; // 1 MB default
     }
 
     start() {
@@ -43,8 +50,15 @@ export default class App {
             mediaExts: msg.requestFileExts,
             blockedHosts: msg.blockedHosts,
             matchingHosts: msg.matchingHosts,
-            mediaTypes: msg.mediaTypes
+            mediaTypes: msg.mediaTypes,
+            blockedMimeTypes: msg.blockedMimeTypes || this.blockedMimeTypes,
+            blockedUrlPatterns: msg.blockedUrlPatterns || this.blockedUrlPatterns,
+            minDownloadSize: msg.minDownloadSize || this.minDownloadSize
         });
+        // Update local filtering config from server
+        if (msg.blockedMimeTypes) this.blockedMimeTypes = msg.blockedMimeTypes;
+        if (msg.blockedUrlPatterns) this.blockedUrlPatterns = msg.blockedUrlPatterns;
+        if (msg.minDownloadSize !== undefined) this.minDownloadSize = msg.minDownloadSize;
         this.updateActionIcon();
     }
 
@@ -66,31 +80,39 @@ export default class App {
         this.isMonitoringEnabled() && this.connector.isConnected() && this.connector.postMessage("/media", data);
     }
 
-    onDeterminingFilename(download, suggest) {
-        this.logger.log("onDeterminingFilename");
+    /**
+     * Intercept downloads created by the browser. This replaces the deprecated
+     * onDeterminingFilename approach with onCreated, which is supported in MV3.
+     */
+    onDownloadCreated(download) {
+        this.logger.log("onDownloadCreated");
         if (!this.isMonitoringEnabled()) {
             return;
         }
         this.logger.log(download);
         let url = download.finalUrl || download.url;
-        this.logger.log(url);
-        if (this.isMonitoringEnabled() && this.shouldTakeOver(url, download.filename)) {
-            chrome.downloads.cancel(
-                download.id,
-                () => chrome.downloads.erase({ id: download.id })
-            );
-            let referrer = download.referrer;
-            if (!referrer && download.finalUrl !== download.url) {
-                referrer = download.url;
-            }
-            this.triggerDownload(url, download.filename,
-                referrer, download.fileSize, download.mime);
-        }
-    }
+        let filename = download.filename || "";
 
-    onDownloadCreated(download) {
-        this.logger.log("onDownloadCreated");
-        this.logger.log(download);
+        if (!this.isSupportedProtocol(url)) {
+            return;
+        }
+
+        // Check if this download should be intercepted
+        if (!this.shouldTakeOver(url, filename, download.mime, download.fileSize)) {
+            this.logger.log("Skipping download: " + url);
+            return;
+        }
+
+        // Cancel the browser download and hand off to XDM
+        chrome.downloads.cancel(
+            download.id,
+            () => chrome.downloads.erase({ id: download.id })
+        );
+        let referrer = download.referrer;
+        if (!referrer && download.finalUrl !== download.url) {
+            referrer = download.url;
+        }
+        this.triggerDownload(url, filename, referrer, download.fileSize, download.mime);
     }
 
     onTabUpdate(tabId, changeInfo, tab) {
@@ -114,11 +136,9 @@ export default class App {
     }
 
     register() {
+        // Use onCreated instead of deprecated onDeterminingFilename (MV3 compatible)
         chrome.downloads.onCreated.addListener(
             this.onDownloadCreatedCallback
-        );
-        chrome.downloads.onDeterminingFilename.addListener(
-            this.onDeterminingFilenameCallback
         );
         chrome.tabs.onUpdated.addListener(
             this.onTabUpdateCallback
@@ -131,25 +151,85 @@ export default class App {
 
     isSupportedProtocol(url) {
         if (!url) return false;
-        let u = new URL(url);
-        return u.protocol === 'http:' || u.protocol === 'https:';
+        try {
+            let u = new URL(url);
+            return u.protocol === 'http:' || u.protocol === 'https:';
+        } catch {
+            return false;
+        }
     }
 
-    shouldTakeOver(url, file) {
-        let u = new URL(url);
+    /**
+     * Determines if XDM should intercept this download.
+     * Implements strict intent detection:
+     * 1. Skip blocked MIME types (thumbnails, small images)
+     * 2. Skip downloads below minimum size threshold
+     * 3. Skip URLs matching blocked CDN/thumbnail patterns
+     * 4. Only intercept if file extension matches known types
+     */
+    shouldTakeOver(url, file, mimeType, fileSize) {
         if (!this.isSupportedProtocol(url)) {
             return false;
         }
+
+        let u;
+        try {
+            u = new URL(url);
+        } catch {
+            return false;
+        }
+
         let hostName = u.host;
+
+        // Check blocked hosts
         if (this.blockedHosts.find(item => hostName.indexOf(item) >= 0)) {
             return false;
         }
+
+        // Check blocked MIME types (e.g., image/jpeg, image/png thumbnails)
+        if (mimeType && this.isBlockedMimeType(mimeType)) {
+            this.logger.log("Blocked MIME type: " + mimeType);
+            return false;
+        }
+
+        // Check blocked URL patterns (CDN thumbnails, favicons, etc.)
+        if (this.isBlockedUrlPattern(url)) {
+            this.logger.log("Blocked URL pattern: " + url);
+            return false;
+        }
+
+        // Check minimum file size threshold
+        if (fileSize && fileSize > 0 && this.minDownloadSize > 0 && fileSize < this.minDownloadSize) {
+            this.logger.log("Below min size (" + fileSize + " < " + this.minDownloadSize + "): " + url);
+            return false;
+        }
+
+        // Check if file extension matches known downloadable types
         let path = file || u.pathname;
         let upath = path.toUpperCase();
         if (this.fileExts.find(ext => upath.endsWith(ext))) {
             return true;
         }
+
         return false;
+    }
+
+    /**
+     * Check if a MIME type is in the blocked list (thumbnails, small images).
+     */
+    isBlockedMimeType(mimeType) {
+        if (!mimeType) return false;
+        let lower = mimeType.toLowerCase();
+        return this.blockedMimeTypes.some(blocked => lower.startsWith(blocked));
+    }
+
+    /**
+     * Check if a URL matches blocked CDN/thumbnail patterns.
+     */
+    isBlockedUrlPattern(url) {
+        if (!url || !this.blockedUrlPatterns || this.blockedUrlPatterns.length === 0) return false;
+        let lower = url.toLowerCase();
+        return this.blockedUrlPatterns.some(pattern => lower.includes(pattern.toLowerCase()));
     }
 
     updateActionIcon() {
@@ -161,20 +241,6 @@ export default class App {
                 vc = len + "";
             }
         }
-        // if (this.videoList && this.videoList.length > 0) {
-        //     let len = this.videoList.filter(vid => {
-        //         if (!vid.tabId) {
-        //             return true;
-        //         }
-        //         if (vid.tabId == '-1') {
-        //             return true;
-        //         }
-        //         return (vid.tabId == this.activeTabId);
-        //     }).length;
-        //     if (len > 0) {
-        //         vc = len + "";
-        //     }
-        // }
         chrome.action.setBadgeText({ text: vc });
         if (!this.connector.isConnected()) {
             this.logger.log("Not connected...");
@@ -188,9 +254,6 @@ export default class App {
         else {
             chrome.action.setPopup({ popup: "./popup.html" });
             return;
-            // if (this.videoList && this.videoList.length > 0) {
-            //     chrome.action.setBadgeText({ text: this.videoList.length + "" });
-            // }
         }
     }
 
@@ -250,12 +313,6 @@ export default class App {
             let resp = {
                 enabled: this.isMonitoringEnabled(),
                 list: this.videoList
-                // list: this.videoList.filter(vid => {
-                //     if (!vid.tabId) {
-                //         return true;
-                //     }
-                //     return (vid.tabId == this.activeTabId);
-                // })
             };
             sendResponse(resp);
         }

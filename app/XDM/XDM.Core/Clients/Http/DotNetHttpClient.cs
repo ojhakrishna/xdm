@@ -1,4 +1,4 @@
-﻿#if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -52,9 +52,14 @@ namespace XDM.Core.Clients.Http
                         AutomaticDecompression = DecompressionMethods.All,
                         PreAuthenticate = true,
                         UseDefaultCredentials = true,
-                        MaxConnectionsPerServer = 100,
-                        ServerCertificateCustomValidationCallback = (a, b, c, d) => true
+                        MaxConnectionsPerServer = 100
                     };
+
+                    // Only bypass SSL validation when user explicitly enables it
+                    if (Config.Instance.AllowInvalidSsl)
+                    {
+                        handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+                    }
 
                     var p = ProxyHelper.GetProxy(this.proxy);
                     if (p != null)
@@ -138,12 +143,16 @@ namespace XDM.Core.Clients.Http
             try
             {
                 response = this.hc!.Send(r, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                response.EnsureSuccessStatusCode();
+                // Don't call EnsureSuccessStatusCode() here — let the caller
+                // handle status codes. Some responses (206, 302) are valid.
             }
             catch (HttpRequestException we)
             {
                 Log.Debug(we, we.Message);
                 response?.Dispose();
+                // Re-throw so download retry logic can handle connection failures
+                // instead of silently returning a null response
+                throw;
             }
             session.Response = response;
             return new HttpResponse { Session = session };

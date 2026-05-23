@@ -1,0 +1,139 @@
+name: XDM Build
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build-linux:
+    name: Build Linux (GTK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./app/XDM
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install GTK3 dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
+
+      - name: Restore dependencies
+        run: dotnet restore XDM.Gtk.UI/XDM.Gtk.UI.csproj
+
+      - name: Build
+        run: dotnet build XDM.Gtk.UI/XDM.Gtk.UI.csproj --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test XDM.Tests/XDM.Tests.csproj --verbosity normal
+
+      - name: Publish (linux-x64)
+        run: dotnet publish XDM.Gtk.UI/XDM.Gtk.UI.csproj -c Release -r linux-x64 --self-contained -o publish/linux-x64
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdm-linux-x64
+          path: ./app/XDM/publish/linux-x64/
+          retention-days: 30
+
+  build-windows:
+    name: Build Windows (WPF)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./app/XDM
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore XDM.Wpf.UI/XDM.Wpf.UI.csproj
+
+      - name: Build
+        run: dotnet build XDM.Wpf.UI/XDM.Wpf.UI.csproj --no-restore --configuration Release
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdm-windows-x86
+          path: ./app/XDM/XDM.Wpf.UI/bin/x86/Release/
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS (GTK)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ./app/XDM
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install GTK3 dependencies
+        run: brew install gtk+3
+
+      - name: Restore dependencies
+        run: dotnet restore XDM.Gtk.UI/XDM.Gtk.UI.csproj
+
+      - name: Build
+        run: dotnet build XDM.Gtk.UI/XDM.Gtk.UI.csproj --no-restore --configuration Release
+
+      - name: Publish (osx-x64)
+        run: dotnet publish XDM.Gtk.UI/XDM.Gtk.UI.csproj -c Release -r osx-x64 --self-contained -o publish/osx-x64
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdm-macos-x64
+          path: ./app/XDM/publish/osx-x64/
+          retention-days: 30
+
+  package-extensions:
+    name: Package Browser Extensions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package Chrome Extension
+        run: |
+          cd app/XDM/chrome-extension
+          zip -r ../../../xdm-chrome-extension.zip . -x "firefox-manifest.json"
+
+      - name: Package Firefox Extension
+        run: |
+          cd app/XDM/chrome-extension
+          cp firefox-manifest.json manifest.json.bak
+          cp manifest.json chrome-manifest.json.bak
+          cp firefox-manifest.json manifest.json
+          zip -r ../../../xdm-firefox-extension.zip . -x "chrome-manifest.json.bak" -x "firefox-manifest.json"
+          cp chrome-manifest.json.bak manifest.json
+          rm -f chrome-manifest.json.bak manifest.json.bak
+
+      - name: Upload Chrome Extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdm-chrome-extension
+          path: xdm-chrome-extension.zip
+          retention-days: 30
+
+      - name: Upload Firefox Extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: xdm-firefox-extension
+          path: xdm-firefox-extension.zip
+          retention-days: 30

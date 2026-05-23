@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -201,6 +201,7 @@ namespace XDM.Core.Util
 
         private static string FindChromeExecutableFromRegistry()
         {
+            if (!OperatingSystem.IsWindows()) return null;
             try
             {
                 using var regKey = Registry.ClassesRoot.OpenSubKey(@"ChromeHTML\shell\open\command");
@@ -335,7 +336,7 @@ namespace XDM.Core.Util
             try
             {
                 var os = Environment.OSVersion.Platform;
-                if (os == PlatformID.Win32NT)
+                if (os == PlatformID.Win32NT && OperatingSystem.IsWindows())
                 {
                     using var hkcuRun = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
                     if (hkcuRun != null)
@@ -405,75 +406,7 @@ namespace XDM.Core.Util
                 $"Icon={iconPath}";
         }
 
-        //     public static void addToStartup()
-        //     {
-        //         File dir = new File(System.getProperty("user.home"), "Library/LaunchAgents");
-        //         dir.mkdirs();
-        //         File f = new File(dir, "org.sdg.xdman.plist");
-        //         FileOutputStream fs = null;
-        //         try
-        //         {
-        //             fs = new FileOutputStream(f);
-        //             fs.write(getStartupPlist().getBytes());
-        //         }
-        //         catch (Exception e)
-        //         {
-        //             Logger.log(e);
-        //         }
-        //         finally
-        //         {
-        //             try
-        //             {
-        //                 if (fs != null)
-        //                     fs.close();
-        //             }
-        //             catch (Exception e2)
-        //             {
-        //             }
-        //         }
-        //         f.setExecutable(true);
-        //     }
-
-        //     public static boolean isAlreadyAutoStart()
-        //     {
-        //         File f = new File(System.getProperty("user.home"), "Library/LaunchAgents/org.sdg.xdman.plist");
-        //         if (!f.exists())
-        //             return false;
-        //         FileInputStream in = null;
-        //         byte[] buf = new byte[(int)f.length()];
-        //         try
-        //         {
-        //in = new FileInputStream(f);
-        //             if (in.read(buf) != f.length()) {
-        //                 return false;
-        //             }
-        //         }
-        //         catch (Exception e)
-        //         {
-        //             Logger.log(e);
-        //         }
-        //         finally
-        //         {
-        //             try
-        //             {
-        //                 if (in != null)
-        //		in.close();
-        //             }
-        //             catch (Exception e2)
-        //             {
-        //             }
-        //         }
-        //         String str = new String(buf);
-        //         String s1 = getProperPath(System.getProperty("java.home"));
-        //         String s2 = XDMUtils.getJarFile().getAbsolutePath();
-        //         return str.contains(s1) && str.contains(s2);
-        //     }
-
-        //     public static void removeFromStartup()
-        //     {
-        //         File f = new File(System.getProperty("user.home"), "Library/LaunchAgents/org.sdg.xdman.plist");
-        //         f.delete();
-        //     }
+        // Legacy Java startup code removed during .NET 10 migration
 
 #endif
 
@@ -502,7 +435,7 @@ namespace XDM.Core.Util
             try
             {
                 var os = Environment.OSVersion.Platform;
-                if (os == PlatformID.Win32NT)
+                if (os == PlatformID.Win32NT && OperatingSystem.IsWindows())
                 {
                     using var hkcuRun = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
                     if (hkcuRun != null)

@@ -16,6 +16,14 @@ export default class RequestWatcher {
         this.onErrorOccurredEventCallback = this.onErrorOccurredEvent.bind(this);
         this.urlPatterns = [];
         this.requestFileExts = [];
+
+        // Download filtering config
+        this.blockedMimeTypes = [
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "image/svg+xml", "image/x-icon", "image/bmp", "image/tiff"
+        ];
+        this.blockedUrlPatterns = [];
+        this.minDownloadSize = 1048576;
     }
 
     updateConfig(config) {
@@ -37,6 +45,15 @@ export default class RequestWatcher {
         if (config.requestFileExts) {
             this.requestFileExts = config.requestFileExts
         }
+        if (config.blockedMimeTypes) {
+            this.blockedMimeTypes = config.blockedMimeTypes;
+        }
+        if (config.blockedUrlPatterns) {
+            this.blockedUrlPatterns = config.blockedUrlPatterns;
+        }
+        if (config.minDownloadSize !== undefined) {
+            this.minDownloadSize = config.minDownloadSize;
+        }
         if (config.urlPatterns) {
             this.urlPatterns = config.urlPatterns.map(pattern => {
                 try {
@@ -52,6 +69,32 @@ export default class RequestWatcher {
         let hostName = u.host;
         if (this.blockedHosts.find(h => hostName.indexOf(h) >= 0)) {
             return false;
+        }
+
+        // Check blocked URL patterns (CDN thumbnails, favicons, etc.)
+        if (this.isBlockedUrlPattern(res.url)) {
+            return false;
+        }
+
+        // Check blocked MIME types from response headers
+        let mediaType = res.responseHeaders.find(h => h["name"].toUpperCase() === "CONTENT-TYPE");
+        if (mediaType && this.isBlockedMimeType(mediaType["value"])) {
+            return false;
+        }
+
+        // Check minimum download size from Content-Length header
+        if (this.minDownloadSize > 0) {
+            let contentLength = res.responseHeaders.find(h => h["name"].toUpperCase() === "CONTENT-LENGTH");
+            if (contentLength) {
+                let size = parseInt(contentLength["value"], 10);
+                if (size > 0 && size < this.minDownloadSize) {
+                    // Only apply size filter for non-streaming media requests
+                    // (HLS/DASH manifests are small but should still be captured)
+                    if (!this.isStreamingMedia(res)) {
+                        return false;
+                    }
+                }
+            }
         }
 
         let path = u.pathname;
@@ -70,7 +113,7 @@ export default class RequestWatcher {
             }
         } catch { }
 
-        let mediaType = res.responseHeaders.find(h => h["name"].toUpperCase() === "CONTENT-TYPE");
+        // Match media content types (audio/*, video/*)
         if (mediaType && this.mediaTypes.find(m => mediaType["value"].indexOf(m) >= 0)) {
             return true;
         }
@@ -79,14 +122,77 @@ export default class RequestWatcher {
             return true;
         }
 
+        // Content-Disposition: attachment detection — if server explicitly sends
+        // a Content-Disposition header with "attachment", this is a real download
         let contentDisposition = res.responseHeaders.find(h => h["name"].toUpperCase() === "CONTENT-DISPOSITION");
-        if (contentDisposition && this.fileExts.find(ext => contentDisposition["value"].toUpperCase().indexOf("." + ext) >= 0)) {
-            return true;
+        if (contentDisposition) {
+            let dispositionValue = contentDisposition["value"].toUpperCase();
+            // Check for file extensions in Content-Disposition
+            if (this.fileExts.find(ext => dispositionValue.indexOf("." + ext) >= 0)) {
+                return true;
+            }
+            // If Content-Disposition says "attachment", treat as downloadable
+            if (dispositionValue.indexOf("ATTACHMENT") >= 0) {
+                return true;
+            }
         }
 
+        // Match by known streaming hosts (e.g., googlevideo for YouTube)
         if (this.matchingHosts.find(h => hostName.indexOf(h) >= 0)) {
             return true;
         }
+
+        // Detect HLS/DASH streaming manifests by content type
+        if (mediaType) {
+            let ct = mediaType["value"].toLowerCase();
+            if (ct.includes("mpegurl") || ct.includes("m3u8") ||
+                ct.includes("dash") || ct.includes("mpd")) {
+                return true;
+            }
+        }
+
+        // Detect HLS/DASH streaming manifests by URL extension
+        let lowerUrl = res.url.toLowerCase();
+        if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mpd")) {
+            return true;
+        }
+    }
+
+    /**
+     * Check if a response is a streaming media manifest (HLS/DASH).
+     * These should not be filtered by size since manifests are small files.
+     */
+    isStreamingMedia(res) {
+        let lowerUrl = res.url.toLowerCase();
+        if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mpd")) {
+            return true;
+        }
+        let mediaType = res.responseHeaders.find(h => h["name"].toUpperCase() === "CONTENT-TYPE");
+        if (mediaType) {
+            let ct = mediaType["value"].toLowerCase();
+            if (ct.includes("mpegurl") || ct.includes("dash") || ct.includes("mpd")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if a MIME type is in the blocked list (thumbnails, small images).
+     */
+    isBlockedMimeType(mimeType) {
+        if (!mimeType) return false;
+        let lower = mimeType.toLowerCase();
+        return this.blockedMimeTypes.some(blocked => lower.startsWith(blocked));
+    }
+
+    /**
+     * Check if a URL matches blocked CDN/thumbnail patterns.
+     */
+    isBlockedUrlPattern(url) {
+        if (!url || !this.blockedUrlPatterns || this.blockedUrlPatterns.length === 0) return false;
+        let lower = url.toLowerCase();
+        return this.blockedUrlPatterns.some(pattern => lower.includes(pattern.toLowerCase()));
     }
 
     onSendHeadersEvent(info) {

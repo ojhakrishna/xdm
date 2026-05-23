@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -619,7 +619,7 @@ namespace XDM.Core
                 download.Probed -= HandleProbeResult;
                 download.Finished -= DownloadFinished;
                 download.ProgressChanged -= DownloadProgressChanged;
-                download.AssembingProgressChanged += AssembleProgressChanged;
+                download.AssembingProgressChanged -= AssembleProgressChanged;
                 download.Cancelled -= DownloadCancelled;
                 download.Failed -= DownloadFailed;
             }

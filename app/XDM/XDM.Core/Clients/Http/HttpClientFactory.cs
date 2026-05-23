@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,18 +23,16 @@ namespace XDM.Core.Clients.Http
                 }
             }
 
+#if NET5_0_OR_GREATER
+            return new DotNetHttpClient(proxy);
+#else
+            // Fallback for legacy .NET Framework builds
             if (Environment.Version.Major == 2)
             {
                 return new WinHttpClient(proxy);
             }
-            else
-            {
-#if NET5_0_OR_GREATER
-                return new DotNetHttpClient(proxy);
-#else
-                return new NetFxHttpClient(proxy);
+            return new NetFxHttpClient(proxy);
 #endif
-            }
         }
     }
 }

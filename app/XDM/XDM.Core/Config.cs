@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -64,14 +64,18 @@ namespace XDM.Core
         public static string[] DefaultFileExtensions => new string[]
             {
                 "3GP", "7Z", "AVI", "BZ2", "DEB", "DOC", "DOCX", "EXE", "ISO",
-                "MSI", "PDF", "PPT", "PPTX", "RAR", "RPM", "XLS", "XLSX", "SIT", "SITX", "TAR", "JAR", "ZIP", "XZ"
+                "MSI", "PDF", "PPT", "PPTX", "RAR", "RPM", "XLS", "XLSX", "SIT", "SITX", "TAR", "JAR", "ZIP", "XZ",
+                "MP4", "M3U8", "F4M", "WEBM", "OGG", "MP3", "AAC", "FLV", "MKV", "DIVX",
+                "MOV", "MPG", "MPEG", "OPUS", "MPD"
             };
 
         public string[] FileExtensions { get; set; }
 
         public static string[] DefaultBlockedHosts => new string[]
             {
-                "update.microsoft.com","windowsupdate.com","thwawte.com"
+                "update.microsoft.com","windowsupdate.com","thwawte.com",
+                "lh3.googleusercontent.com","lh4.googleusercontent.com",
+                "lh5.googleusercontent.com","lh6.googleusercontent.com"
             };
 
         public string[] BlockedHosts { get; set; }
@@ -79,6 +83,13 @@ namespace XDM.Core
         public string Language { get; set; } = "English";
 
         public bool AllowSystemDarkTheme { get; set; } = true;
+
+        /// <summary>
+        /// When true, disables SSL certificate validation for all downloads.
+        /// Default is false (secure). Only enable if you need to download from
+        /// servers with self-signed or expired certificates.
+        /// </summary>
+        public bool AllowInvalidSsl { get; set; } = false;
 
         private Config()
         {
@@ -114,6 +125,47 @@ namespace XDM.Core
         public bool MonitorClipboard { get; set; } = false;
 
         public int MinVideoSize { get; set; } = 1 * 1024;
+
+        /// <summary>
+        /// Minimum file size in bytes for the browser extension to intercept a download.
+        /// Files smaller than this are left to the browser's default handler.
+        /// Default: 1 MB (1048576 bytes). Set to 0 to disable.
+        /// </summary>
+        public long MinDownloadSizeBytes { get; set; } = 1048576;
+
+        /// <summary>
+        /// MIME types that should never be intercepted by the browser extension.
+        /// Prevents thumbnails and small images from being grabbed.
+        /// </summary>
+        public static string[] DefaultBlockedMimeTypes => new string[]
+        {
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "image/svg+xml", "image/x-icon", "image/bmp", "image/tiff"
+        };
+
+        public string[] BlockedMimeTypes { get; set; } = DefaultBlockedMimeTypes;
+
+        /// <summary>
+        /// URL patterns (substrings) that indicate thumbnail/preview CDN requests
+        /// which should never be intercepted.
+        /// </summary>
+        public static string[] DefaultBlockedUrlPatterns => new string[]
+        {
+            "/photo.jpg", "/s0/", "/s128/", "/s220/", "/s320/",
+            "=s0", "=s128", "=s220", "=s320", "=w100", "=w200", "=w400",
+            "/thumb/", "/thumbnail", "/_thumb",
+            ".gstatic.com", ".ggpht.com",
+            "photos.google.com/photo/",
+            "favicon", "/icon"
+        };
+
+        public string[] BlockedUrlPatterns { get; set; } = DefaultBlockedUrlPatterns;
+
+        /// <summary>
+        /// When true, downloads from the browser extension require user confirmation
+        /// before being added to the download queue.
+        /// </summary>
+        public bool RequireDownloadConfirmation { get; set; } = true;
 
         public string TempDir { get; set; }
 

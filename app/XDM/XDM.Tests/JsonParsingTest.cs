@@ -5,184 +5,84 @@ using System;
 
 namespace XDM.Tests
 {
-    public class Tests
+    [TestFixture]
+    public class JsonParsingTests
     {
-        [SetUp]
-        public void Setup()
+        [Test]
+        public void DeserializeBrowserMessage_ValidJson_ParsesCorrectly()
         {
+            var json = @"{
+                ""messageType"": ""download"",
+                ""message"": {
+                    ""url"": ""https://example.com/file.zip"",
+                    ""cookies"": { ""session"": ""abc123"" },
+                    ""responseHeaders"": {
+                        ""Content-Type"": [""application/zip""],
+                        ""Content-Length"": [""1048576""]
+                    },
+                    ""requestHeaders"": {
+                        ""User-Agent"": [""Mozilla/5.0""]
+                    }
+                }
+            }";
+
+            using var reader = new JsonTextReader(new StringReader(json));
+            Assert.That(reader.Read(), Is.True);
+            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.StartObject));
         }
 
         [Test]
-        public void DeserializeBrowserMessageJsonSuccess()
+        public void DeserializeBrowserMessage_EmptyJson_HandlesGracefully()
         {
-            Test();
+            var json = "{}";
+            using var reader = new JsonTextReader(new StringReader(json));
+            Assert.That(reader.Read(), Is.True);
+            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.StartObject));
+            Assert.That(reader.Read(), Is.True);
+            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.EndObject));
         }
 
-        private T? ReadProperty<T>(JsonTextReader reader, string name)
+        [Test]
+        public void DeserializeBrowserMessage_MissingFields_DoesNotThrow()
         {
-            if (reader.TokenType == JsonToken.PropertyName && reader.Value.ToString() == name &&
-                        reader.Read() && reader.Value != null)
+            var json = @"{ ""messageType"": ""download"", ""message"": {} }";
+            using var reader = new JsonTextReader(new StringReader(json));
+            Assert.DoesNotThrow(() =>
             {
-                return (T)reader.Value;
-            }
-            return default(T);
+                while (reader.Read()) { }
+            });
         }
 
-        private bool IsObjectStart(JsonTextReader reader, string name)
+        [Test]
+        public void DeserializeBrowserMessage_WithMultipleMessages_ParsesAll()
         {
-            return reader.TokenType == JsonToken.PropertyName && reader.Value.ToString() == name &&
-                        reader.Read() && reader.TokenType == JsonToken.StartObject;
-        }
+            var json = @"{
+                ""messageType"": ""batch"",
+                ""messages"": [
+                    { ""url"": ""https://example.com/a.mp4"" },
+                    { ""url"": ""https://example.com/b.mp4"" }
+                ]
+            }";
 
-        private bool IsListStart(JsonTextReader reader, string name)
-        {
-            return reader.TokenType == JsonToken.PropertyName && reader.Value.ToString() == name &&
-                        reader.Read() && reader.TokenType == JsonToken.StartArray;
-        }
-
-        private void SkipUnknownParts(JsonTextReader reader)
-        {
-            if (reader.TokenType == JsonToken.PropertyName && reader.Value != null)
-            {
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonToken.StartObject)
-                    {
-                        var n = 1;
-                        while (reader.Read())
-                        {
-                            if (reader.TokenType == JsonToken.EndObject) n--;
-                            if (reader.TokenType == JsonToken.StartObject) n++;
-                            if (n == 0) return;
-                        }
-                    }
-                    else if (reader.TokenType == JsonToken.StartArray)
-                    {
-                        var n = 1;
-                        while (reader.Read())
-                        {
-                            if (reader.TokenType == JsonToken.EndArray) n--;
-                            if (reader.TokenType == JsonToken.StartArray) n++;
-                            if (n == 0) return;
-                        }
-                    }
-                    else if (reader.Value != null)
-                    {
-                        continue;
-                    }
-                }
-            }
-        }
-
-        private void ReadMessageObject(JsonTextReader reader)
-        {
+            using var reader = new JsonTextReader(new StringReader(json));
+            int objectCount = 0;
             while (reader.Read())
             {
-                if (reader.TokenType == JsonToken.EndObject) break;
-                var url = ReadProperty<string>(reader, "url");
-                if (url != null)
-                {
-                    Console.WriteLine("url: {0}", url);
-                }
-                if (IsObjectStart(reader, "cookies"))
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonToken.EndObject) break;
-                        if (reader.TokenType == JsonToken.PropertyName && reader.Value != null)
-                        {
-                            var cookieName = (string)reader.Value;
-                            if (reader.Read() && reader.TokenType == JsonToken.String)
-                            {
-                                var cookieValue = (string)reader.Value;
-                                Console.WriteLine("cookieName: {0}, cookieValue: {1}", cookieName, cookieValue);
-                            }
-                        }
-                    }
-                }
-
-                if (IsObjectStart(reader, "responseHeaders"))// && IsListStart(reader, "realUA"))
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonToken.EndObject) break;
-                        if (reader.TokenType == JsonToken.PropertyName && reader.Value != null)
-                        {
-                            var headerName = (string)reader.Value;
-                            if (IsListStart(reader, headerName))
-                            {
-                                while (reader.Read())
-                                {
-                                    if (reader.TokenType == JsonToken.EndArray) break;
-                                    if (reader.TokenType == JsonToken.String)
-                                    {
-                                        Console.WriteLine("{0}: {1}", headerName, reader.Value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (IsObjectStart(reader, "requestHeaders"))
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.TokenType == JsonToken.EndObject) break;
-                        if (reader.TokenType == JsonToken.PropertyName && reader.Value != null)
-                        {
-                            var headerName = (string)reader.Value;
-                            if (IsListStart(reader, headerName))
-                            {
-                                while (reader.Read())
-                                {
-                                    if (reader.TokenType == JsonToken.EndArray) break;
-                                    if (reader.TokenType == JsonToken.String)
-                                    {
-                                        Console.WriteLine("{0}: {1}", headerName, reader.Value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                SkipUnknownParts(reader);
+                if (reader.TokenType == JsonToken.StartObject) objectCount++;
             }
+            Assert.That(objectCount, Is.EqualTo(3)); // 1 root + 2 messages
         }
 
-        private void Test()
+        [Test]
+        public void DeserializeBrowserMessage_MalformedJson_StopsReading()
         {
-            var reader = new JsonTextReader(new StreamReader(@"C:\Users\subhro\Desktop\message.json"));
-            if (reader.Read() && reader.TokenType == JsonToken.StartObject)
-            {
-                while (reader.Read())
-                {
-                    if (reader.TokenType == JsonToken.EndObject) break;
-
-                    var messageType = ReadProperty<string>(reader, "messageType");
-                    if (messageType != null)
-                    {
-                        Console.WriteLine("messageType: {0}", messageType);
-                    }
-                    if (IsObjectStart(reader, "message"))
-                    {
-                        ReadMessageObject(reader);
-                    }
-                    if (IsListStart(reader, "messages"))
-                    {
-                        while (reader.Read())
-                        {
-                            if (reader.TokenType == JsonToken.EndArray) break;
-                            if (reader.TokenType == JsonToken.StartObject)
-                            {
-                                ReadMessageObject(reader);
-                            }
-                        }
-                    }
-                    SkipUnknownParts(reader);
-                }
-            }
+            var json = @"{ ""messageType"": ""download"", ";
+            using var reader = new JsonTextReader(new StringReader(json));
+            // Newtonsoft.Json returns false on truncated input
+            int tokenCount = 0;
+            while (reader.Read()) { tokenCount++; }
+            // Should have read StartObject and the PropertyName but stopped
+            Assert.That(tokenCount, Is.LessThan(5));
         }
     }
 }

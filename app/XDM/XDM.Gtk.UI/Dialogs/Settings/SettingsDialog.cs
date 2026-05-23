@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,6 +51,13 @@ namespace XDM.GtkUI.Dialogs.Settings
             TxtExceptions, TxtDefaultVideoFormats, TxtDefaultFileTypes;
         [UI]
         private TreeView LvCategories, LvPasswords;
+
+        // New filtering controls (added programmatically since Glade file is too large to edit safely)
+        private Entry TxtBlockedMimeTypes;
+        private Entry TxtBlockedUrlPatterns;
+        private SpinButton SpnMinDownloadSize;
+        private CheckButton ChkRequireConfirmation;
+        private CheckButton ChkAllowInvalidSsl;
 
         [UI]
         private Notebook Tabs;
@@ -130,6 +137,107 @@ namespace XDM.GtkUI.Dialogs.Settings
 
             BtnBrowse.Clicked += BtnBrowse_Clicked;
             BtnUserAgentReset.Clicked += BtnUserAgentReset_Clicked;
+
+            // Add new filtering controls programmatically
+            AddNewFilteringControls();
+        }
+
+        private Box? GetNotebookPageBox(int pageIndex)
+        {
+            // Glade structure: Notebook → ScrolledWindow → Viewport → Box
+            var page = Tabs.GetNthPage(pageIndex);
+            if (page is ScrolledWindow sw)
+            {
+                var viewport = sw.Child;
+                if (viewport is Viewport vp)
+                {
+                    if (vp.Child is Box box) return box;
+                }
+                // Some pages might have Box directly in ScrolledWindow
+                if (viewport is Box b) return b;
+            }
+            if (page is Box directBox) return directBox;
+            return null;
+        }
+
+        private void AddNewFilteringControls()
+        {
+            // Find the Browser Monitoring page (page 0 of notebook)
+            var monitoringPage = GetNotebookPageBox(0);
+            if (monitoringPage == null) return;
+
+            // --- Blocked MIME Types ---
+            var lblMime = new Label
+            {
+                Text = "Do not capture downloads with these MIME types",
+                Xalign = 0,
+                MarginTop = 10
+            };
+            TxtBlockedMimeTypes = new Entry
+            {
+                PlaceholderText = "image/jpeg,image/png,image/webp,...",
+                MarginTop = 2
+            };
+            var btnDefaultMime = new Button { Label = TextResource.GetText("DESC_DEF"), MarginTop = 2 };
+            btnDefaultMime.Clicked += (_, _) =>
+            {
+                TxtBlockedMimeTypes.Text = string.Join(",", Config.DefaultBlockedMimeTypes);
+            };
+
+            // --- Blocked URL Patterns ---
+            var lblUrl = new Label
+            {
+                Text = "Do not capture downloads matching these URL patterns",
+                Xalign = 0,
+                MarginTop = 10
+            };
+            TxtBlockedUrlPatterns = new Entry
+            {
+                PlaceholderText = "*.googleusercontent.com/*/photo*,...",
+                MarginTop = 2
+            };
+            var btnDefaultUrl = new Button { Label = TextResource.GetText("DESC_DEF"), MarginTop = 2 };
+            btnDefaultUrl.Clicked += (_, _) =>
+            {
+                TxtBlockedUrlPatterns.Text = string.Join(",", Config.DefaultBlockedUrlPatterns);
+            };
+
+            // --- Min Download Size ---
+            var hboxSize = new HBox(false, 5) { MarginTop = 10 };
+            var lblSize = new Label { Text = "Minimum download size (KB)", Xalign = 0 };
+            SpnMinDownloadSize = new SpinButton(0, 102400, 64);
+            hboxSize.PackStart(lblSize, false, false, 0);
+            hboxSize.PackStart(SpnMinDownloadSize, false, false, 5);
+
+            // --- Require Confirmation ---
+            ChkRequireConfirmation = new CheckButton
+            {
+                Label = "Require confirmation before taking over downloads",
+                MarginTop = 5
+            };
+
+            // Add all to monitoring page
+            monitoringPage.PackStart(lblMime, false, false, 0);
+            monitoringPage.PackStart(TxtBlockedMimeTypes, false, false, 0);
+            monitoringPage.PackStart(btnDefaultMime, false, false, 0);
+            monitoringPage.PackStart(lblUrl, false, false, 0);
+            monitoringPage.PackStart(TxtBlockedUrlPatterns, false, false, 0);
+            monitoringPage.PackStart(btnDefaultUrl, false, false, 0);
+            monitoringPage.PackStart(hboxSize, false, false, 0);
+            monitoringPage.PackStart(ChkRequireConfirmation, false, false, 0);
+
+            // --- SSL toggle in Network settings (page 2) ---
+            var networkPage = GetNotebookPageBox(2);
+            if (networkPage == null) return;
+            ChkAllowInvalidSsl = new CheckButton
+            {
+                Label = "Allow invalid SSL certificates (insecure — use only if needed)",
+                MarginTop = 10
+            };
+            networkPage.PackStart(ChkAllowInvalidSsl, false, false, 0);
+
+            monitoringPage.ShowAll();
+            networkPage.ShowAll();
         }
 
         private void SideList_RowSelected(object o, RowSelectedArgs args)
@@ -475,12 +583,15 @@ namespace XDM.GtkUI.Dialogs.Settings
             //BtnEdge.Label = TextResource.GetText("MSG_VID_WIKI_LINK");
             //BtnOpera.Label = TextResource.GetText("MSG_VID_WIKI_LINK");
 
-            Label7.Text = TextResource.GetText("DESC_FILETYPES");
-            Label8.Text = TextResource.GetText("DESC_VIDEOTYPES");
+            Label7.Text = "XDM will automatically take over downloads for these file types (documents, media, archives)";
+            // Video formats are now merged into the unified file types list above
+            Label8.Visible = false;
+            TxtDefaultVideoFormats.Visible = false;
+            BtnDefault2.Visible = false;
             Label9.Text = TextResource.GetText("DESC_SITEEXCEPTIONS");
             Label10.Text = TextResource.GetText("LBL_MIN_VIDEO_SIZE");
 
-            BtnDefault1.Label = BtnDefault2.Label = BtnDefault3.Label = TextResource.GetText("DESC_DEF");
+            BtnDefault1.Label = BtnDefault3.Label = TextResource.GetText("DESC_DEF");
 
             ChkMonitorClipboard.Label = TextResource.GetText("MENU_CLIP_ADD");
             ChkTimestamp.Label = TextResource.GetText("LBL_GET_TIMESTAMP");
@@ -556,6 +667,12 @@ namespace XDM.GtkUI.Dialogs.Settings
             ChkMonitorClipboard.Active = Config.Instance.MonitorClipboard;
             ChkTimestamp.Active = Config.Instance.FetchServerTimeStamp;
 
+            // New filtering settings
+            TxtBlockedMimeTypes.Text = string.Join(",", Config.Instance.BlockedMimeTypes ?? Config.DefaultBlockedMimeTypes);
+            TxtBlockedUrlPatterns.Text = string.Join(",", Config.Instance.BlockedUrlPatterns ?? Config.DefaultBlockedUrlPatterns);
+            SpnMinDownloadSize.Value = Config.Instance.MinDownloadSizeBytes / 1024.0; // bytes to KB
+            ChkRequireConfirmation.Active = Config.Instance.RequireDownloadConfirmation;
+
             //General settings
             ChkShowPrg.Active = Config.Instance.ShowProgressWindow;
             ChkShowComplete.Active = Config.Instance.ShowDownloadCompleteWindow;
@@ -584,6 +701,9 @@ namespace XDM.GtkUI.Dialogs.Settings
             TxtProxyPort.Text = (Config.Instance.Proxy?.Port ?? 0).ToString();
             TxtProxyUser.Text = Config.Instance.Proxy?.UserName;
             TxtProxyPassword.Text = Config.Instance.Proxy?.Password;
+
+            // SSL toggle
+            ChkAllowInvalidSsl.Active = Config.Instance.AllowInvalidSsl;
 
             //Password manager
             foreach (var password in Config.Instance.UserCredentials)
@@ -667,6 +787,12 @@ namespace XDM.GtkUI.Dialogs.Settings
             Config.Instance.FetchServerTimeStamp = ChkTimestamp.Active;
             Config.Instance.MonitorClipboard = ChkMonitorClipboard.Active;
             Config.Instance.MinVideoSize = GtkHelper.GetSelectedComboBoxValue<int>(CmbMinVidSize);
+
+            // New filtering settings
+            Config.Instance.BlockedMimeTypes = TxtBlockedMimeTypes.Text.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
+            Config.Instance.BlockedUrlPatterns = TxtBlockedUrlPatterns.Text.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
+            Config.Instance.MinDownloadSizeBytes = (long)(SpnMinDownloadSize.Value * 1024); // KB to bytes
+            Config.Instance.RequireDownloadConfirmation = ChkRequireConfirmation.Active;
         }
 
         private void UpdateGeneralSettingsConfig()
@@ -704,6 +830,9 @@ namespace XDM.GtkUI.Dialogs.Settings
                 Password = TxtProxyPassword.Text,
                 Port = port
             };
+
+            // SSL toggle
+            Config.Instance.AllowInvalidSsl = ChkAllowInvalidSsl.Active;
         }
 
         private void UpdatePasswordManagerConfig()
