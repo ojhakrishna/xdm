@@ -283,7 +283,7 @@ export default class App {
             if (size) {
                 let fz = +size;
                 if (fz > 0) {
-                    responseHeaders["Content-Length"] = [fz];
+                    responseHeaders["Content-Length"] = [fz + ""];
                 }
             }
             if (mime) {

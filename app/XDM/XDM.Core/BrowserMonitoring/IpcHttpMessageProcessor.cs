@@ -81,14 +81,21 @@ namespace XDM.Core.BrowserMonitoring
                         OnArgsMessage(context);
                         break;
                     default:
-                        throw new ArgumentException("Unsupported request: " + context.RequestPath);
+                        Log.Debug("Unsupported request: " + context.RequestPath);
+                        break;
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Error handling request: " + context.RequestPath);
+            }
+            try
+            {
                 OnSyncMessage(context);
             }
             catch (Exception ex)
             {
-                Log.Debug(ex.ToString());
-                throw;
+                Log.Debug(ex, "Error sending sync response");
             }
         }
 
