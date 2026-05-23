@@ -9,7 +9,6 @@ using XDM.Core.HttpServer;
 using System.Threading;
 using TraceLog;
 using Translations;
-using System.IO;
 using System.Collections.Generic;
 
 namespace XDM.Core.BrowserMonitoring
@@ -19,6 +18,13 @@ namespace XDM.Core.BrowserMonitoring
         private NanoServer server;
         private static string[] blockedHeaders = { "accept", "if", "authorization", "proxy", "connection", "expect", "TE",
             "upgrade", "range", "cookie", "transfer-encoding", "content-type", "content-length","content-encoding" };
+
+        // Newtonsoft.Json was case-insensitive by default; System.Text.Json is not.
+        // The browser extension sends camelCase JSON keys but C# models use PascalCase.
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public IpcHttpMessageProcessor()
         {
@@ -88,7 +94,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnArgsMessage(RequestContext context)
         {
-            var args = JsonSerializer.Deserialize<List<string>>(Encoding.UTF8.GetString(context.RequestBody!));
+            var args = JsonSerializer.Deserialize<List<string>>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (args == null || args.Count == 0)
             {
                 return;
@@ -98,7 +104,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnVideoDownloadMessage(RequestContext context)
         {
-            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (msg == null)
             {
                 return;
@@ -108,7 +114,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnTabUpdateMessage(RequestContext context)
         {
-            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (msg == null)
             {
                 return;
@@ -118,7 +124,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnDownloadMessage(RequestContext context)
         {
-            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (msg == null)
             {
                 return;
@@ -160,7 +166,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnMediaMessage(RequestContext context)
         {
-            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (msg == null)
             {
                 return;
@@ -180,7 +186,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnBatchMessage(RequestContext context)
         {
-            var msgArr = JsonSerializer.Deserialize<ExtensionData[]>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msgArr = JsonSerializer.Deserialize<ExtensionData[]>(Encoding.UTF8.GetString(context.RequestBody!), _jsonOptions);
             if (msgArr == null)
             {
                 return;
