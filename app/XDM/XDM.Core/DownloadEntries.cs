@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json;
 using System;
 using XDM.Core.Downloader;
 

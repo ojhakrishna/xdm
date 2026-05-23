@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,7 +38,7 @@ namespace XDM.Core.Updater
             {
                 if (File.Exists(updateHistoryFile))
                 {
-                    var hist = JsonConvert.DeserializeObject<UpdateHistory>(File.ReadAllText(updateHistoryFile));
+                    var hist = JsonSerializer.Deserialize<UpdateHistory>(File.ReadAllText(updateHistoryFile));
                     lastYoutubeDLUpdate = hist.YoutubeDLUpdateDate;
                     firstUpdate = false;
                 }
@@ -96,10 +97,7 @@ namespace XDM.Core.Updater
                 });
                 using var response = hc.Send(request);
                 using var stream = response.GetResponseStream();
-                using var streamReader = new StreamReader(stream);
-                using var r = new JsonTextReader(streamReader);
-                var serializer = new JsonSerializer();
-                var release = serializer.Deserialize<GitHubRelease?>(r);
+                var release = JsonSerializer.Deserialize<GitHubRelease?>(stream);
                 if (!release.HasValue) return null;
                 if (condition.Invoke(release.Value))
                 {
@@ -217,11 +215,11 @@ namespace XDM.Core.Updater
 
     internal struct GitHubRelease
     {
-        [JsonProperty("tag_name")]
+        [JsonPropertyName("tag_name")]
         public string TagName { get; set; }
         public bool Draft { get; set; }
         public bool Prerelease { get; set; }
-        [JsonProperty("published_at")]
+        [JsonPropertyName("published_at")]
         public DateTime PublishedAt { get; set; }
         public Assets[] Assets { get; set; }
         public string Body { get; set; }
@@ -230,7 +228,7 @@ namespace XDM.Core.Updater
     internal struct Assets
     {
         public string Name { get; set; }
-        [JsonProperty("browser_download_url")]
+        [JsonPropertyName("browser_download_url")]
         public string Url { get; set; }
         public long Size { get; set; }
     }

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json;
 using System.Collections.Generic;
 using System.IO;
 
@@ -197,12 +197,7 @@ namespace YDLWrapper
 
         private static T? Deserialize<T>(string file)
         {
-            return JsonConvert.DeserializeObject<T>(
-                File.ReadAllText(file),
-                new JsonSerializerSettings
-                {
-                    MissingMemberHandling = MissingMemberHandling.Ignore
-                });
+            return System.Text.Json.JsonSerializer.Deserialize<T>(File.ReadAllText(file));
         }
     }
 }

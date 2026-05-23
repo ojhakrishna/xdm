@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Newtonsoft.Json;
+using System.Text.Json;
 using System.IO;
 using System;
 
@@ -26,30 +26,31 @@ namespace XDM.Tests
                 }
             }";
 
-            using var reader = new JsonTextReader(new StringReader(json));
-            Assert.That(reader.Read(), Is.True);
-            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.StartObject));
+            using var doc = JsonDocument.Parse(json);
+            Assert.That(doc.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
+            Assert.That(doc.RootElement.GetProperty("messageType").GetString(), Is.EqualTo("download"));
         }
 
         [Test]
         public void DeserializeBrowserMessage_EmptyJson_HandlesGracefully()
         {
             var json = "{}";
-            using var reader = new JsonTextReader(new StringReader(json));
-            Assert.That(reader.Read(), Is.True);
-            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.StartObject));
-            Assert.That(reader.Read(), Is.True);
-            Assert.That(reader.TokenType, Is.EqualTo(JsonToken.EndObject));
+            using var doc = JsonDocument.Parse(json);
+            Assert.That(doc.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
+            Assert.That(doc.RootElement.EnumerateObject().MoveNext(), Is.False);
         }
 
         [Test]
         public void DeserializeBrowserMessage_MissingFields_DoesNotThrow()
         {
             var json = @"{ ""messageType"": ""download"", ""message"": {} }";
-            using var reader = new JsonTextReader(new StringReader(json));
             Assert.DoesNotThrow(() =>
             {
-                while (reader.Read()) { }
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                // Access properties without throwing
+                _ = root.GetProperty("messageType").GetString();
+                _ = root.GetProperty("message");
             });
         }
 
@@ -64,25 +65,20 @@ namespace XDM.Tests
                 ]
             }";
 
-            using var reader = new JsonTextReader(new StringReader(json));
-            int objectCount = 0;
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonToken.StartObject) objectCount++;
-            }
-            Assert.That(objectCount, Is.EqualTo(3)); // 1 root + 2 messages
+            using var doc = JsonDocument.Parse(json);
+            var messages = doc.RootElement.GetProperty("messages");
+            Assert.That(messages.GetArrayLength(), Is.EqualTo(2));
         }
 
         [Test]
-        public void DeserializeBrowserMessage_MalformedJson_StopsReading()
+        public void DeserializeBrowserMessage_MalformedJson_ThrowsException()
         {
-            var json = @"{ ""messageType"": ""download"", ";
-            using var reader = new JsonTextReader(new StringReader(json));
-            // Newtonsoft.Json returns false on truncated input
-            int tokenCount = 0;
-            while (reader.Read()) { tokenCount++; }
-            // Should have read StartObject and the PropertyName but stopped
-            Assert.That(tokenCount, Is.LessThan(5));
+            var json = @"{ ""messageType"": ""download"", ""url"": ";
+            // System.Text.Json throws JsonException on malformed input
+            Assert.Catch<Exception>(() =>
+            {
+                using var doc = JsonDocument.Parse(json);
+            });
         }
     }
 }

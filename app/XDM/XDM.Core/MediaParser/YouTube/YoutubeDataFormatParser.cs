@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,11 +13,7 @@ namespace XDM.Core.MediaParser.YouTube
         public static KeyValuePair<List<ParsedDualUrlVideoFormat>, List<ParsedUrlVideoFormat>>
             GetFormats(string file)
         {
-            var items = JsonConvert.DeserializeObject<VideoFormatData>(File.ReadAllText(file),
-                new JsonSerializerSettings
-                {
-                    MissingMemberHandling = MissingMemberHandling.Ignore
-                });
+            var items = System.Text.Json.JsonSerializer.Deserialize<VideoFormatData>(File.ReadAllText(file));
 
             var dualVideoItems = new List<ParsedDualUrlVideoFormat>();
             var videoItems = new List<ParsedUrlVideoFormat>();

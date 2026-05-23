@@ -31,47 +31,107 @@ namespace XDM.GtkUI
             Gtk.Application.Init("xdm-app", ref args);
             GLib.ExceptionManager.UnhandledException += ExceptionManager_UnhandledException;
             var globalStyleSheet = @"
-                                    .large-font{ font-size: 16px; }
-                                    .medium-font{ font-size: 14px; }
-                                    ";
+                /* === XDM Branded GTK Theme === */
+
+                /* Font size classes */
+                .large-font { font-size: 16px; }
+                .medium-font { font-size: 14px; font-weight: 600; }
+
+                /* Accent color for selections and focus */
+                @define-color accent_color #6c8cff;
+                @define-color accent_hover #8aa4ff;
+
+                /* Progress bars — branded gradient */
+                progressbar trough {
+                    min-height: 6px;
+                    border-radius: 3px;
+                    background: alpha(@theme_fg_color, 0.1);
+                }
+                progressbar progress {
+                    min-height: 6px;
+                    border-radius: 3px;
+                    background: linear-gradient(to right, #6c8cff, #4ecdc4);
+                }
+
+                /* TreeView selection */
+                treeview.view:selected {
+                    background-color: @accent_color;
+                    color: white;
+                }
+                treeview.view:hover {
+                    background-color: alpha(@accent_color, 0.1);
+                }
+
+                /* Buttons — subtle rounded style */
+                button {
+                    border-radius: 6px;
+                    padding: 4px 12px;
+                    transition: 200ms ease;
+                }
+                button:hover {
+                    background-image: none;
+                    background-color: alpha(@accent_color, 0.12);
+                }
+                button.suggested-action {
+                    background-color: @accent_color;
+                    color: white;
+                }
+
+                /* Notebook tabs */
+                notebook tab {
+                    padding: 6px 14px;
+                    border-radius: 6px 6px 0 0;
+                }
+                notebook tab:checked {
+                    background-color: alpha(@accent_color, 0.15);
+                }
+
+                /* Entry fields */
+                entry {
+                    border-radius: 6px;
+                    padding: 6px 8px;
+                }
+                entry:focus {
+                    border-color: @accent_color;
+                    box-shadow: 0 0 0 2px alpha(@accent_color, 0.2);
+                }
+
+                /* Category sidebar */
+                .dark {
+                    color: @theme_fg_color;
+                    background: alpha(@theme_fg_color, 0.04);
+                }
+
+                /* Scrollbar styling */
+                scrollbar slider {
+                    min-width: 6px;
+                    min-height: 6px;
+                    border-radius: 3px;
+                    background-color: alpha(@theme_fg_color, 0.2);
+                }
+                scrollbar slider:hover {
+                    background-color: alpha(@theme_fg_color, 0.35);
+                }
+
+                /* Check buttons */
+                checkbutton check {
+                    border-radius: 4px;
+                }
+                checkbutton check:checked {
+                    background-color: @accent_color;
+                    border-color: @accent_color;
+                }
+
+                /* Spin buttons */
+                spinbutton {
+                    border-radius: 6px;
+                }
+            ";
 
             var screen = Gdk.Screen.Default;
             var provider = new CssProvider();
             provider.LoadFromData(globalStyleSheet);
             Gtk.StyleContext.AddProviderForScreen(screen, provider, 800);
-            //var screen = Gdk.Screen.Default;
-            //var provider = new CssProvider();
-            //provider.LoadFromData(@".dark 
-            //                                    {
-            //                                        color: gray;
-            //                                        background: rgb(36,41,46);
-            //                                    }
-
-            //                                    treeview.view :selected 
-            //                                    {
-            //                                        background-color: rgb(10,106,182);
-            //                                        color: white;
-            //                                    }
-            //.listt
-            //{
-            //font-family: Segoe UI;
-            //}
-            //                                    .dark2
-            //                                    {
-            //                                        color: gray;
-            //                                        background: rgb(35,35,35);
-            //                                        /*background: rgb(36,41,46);*/
-            //                                    }
-            //                                    .toolbar-border-dark
-            //                                    {  
-            //                                        border-bottom: 1px solid rgb(20,20,20);
-            //                                    }
-            //                                    .toolbar-border-light
-            //                                    {  
-            //                                        border-bottom: 2px solid rgb(240,240,240);
-            //                                    }
-            //                                  ");
-            //Gtk.StyleContext.AddProviderForScreen(screen, provider, 800);
 
             // .NET 10 uses HttpClient which handles TLS and connection limits internally.
             // ServicePointManager is deprecated and has no effect on modern HttpClient.

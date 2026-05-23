@@ -19,7 +19,7 @@ namespace XDM.GtkUI.Dialogs.Settings
 {
     internal class SettingsDialog : Dialog
     {
-        //private int[] minVidSize = new int[] { 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768 };
+
         private WindowGroup group;
         [UI]
         private Label TabHeader1, TabHeader2, TabHeader3, TabHeader4, TabHeader5;
@@ -470,17 +470,6 @@ namespace XDM.GtkUI.Dialogs.Settings
 
         private void BtnFirefox_Clicked(object? sender, EventArgs e)
         {
-            //try
-            //{
-            //    NativeMessagingHostConfigurer.InstallNativeMessagingHostForLinux(Browser.Firefox);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Log.Debug(ex, "Error installing native host");
-            //    GtkHelper.ShowMessageBox(this, TextResource.GetText("MSG_NATIVE_HOST_FAILED"));
-            //    return;
-            //}
-
             try
             {
                 BrowserLauncher.LaunchFirefox(Links.FirefoxExtensionUrl, null);
@@ -498,49 +487,13 @@ namespace XDM.GtkUI.Dialogs.Settings
             wnd.Show();
         }
 
-        private void KillExistingSessions(Browser browser, out string? exeLocation)
-        {
-            exeLocation = null;
-            //if (!GtkHelper.ShowConfirmMessageBox(this, TextResource.GetText("MSG_KILL_BROWSER"), "XDM"))
-            //{
-            //    return;
-            //}
-            //foreach (var exeName in NativeMessagingHostConfigurer.GetBrowserExecutableName(browser))
-            //{
-            //    PlatformHelper.KillAll($"{exeName}", out exeLocation);
-            //}
-        }
+
 
         private void BrowserButtonClick(Browser browser)
         {
-            //KillExistingSessions(browser, out string? exeLocation);
-
-            //try
-            //{
-            //    NativeMessagingHostConfigurer.InstallNativeMessagingHostForLinux(browser);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Log.Debug(ex, "Error installing native host");
-            //    GtkHelper.ShowMessageBox(this, TextResource.GetText("MSG_NATIVE_HOST_FAILED"));
-            //    return;
-            //}
-
             try
             {
                 ShowIntegrationWindow(browser);
-                //BrowserLauncher.LaunchBrowser(browser, Links.ManualExtensionInstallGuideUrl, null);
-                //var args = "chrome://extensions/";
-                //var extLoaderPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ext-loader");
-                //var extensionLoadRequest = false;
-                //if (System.IO.Directory.Exists(extLoaderPath))
-                //{
-                //    args = $"--load-extension=\"{extLoaderPath}\"";
-                //    extensionLoadRequest = true;
-                //}
-                //var sucess = BrowserLauncher.LaunchBrowser(browser, args, exeLocation);
-                //var wnd = ChromeIntegratorWindow.CreateFromGladeFile();// new IntegrationWindow(browser, sucess && extensionLoadRequest);
-                //wnd.Show();
             }
             catch (Exception ex)
             {

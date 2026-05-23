@@ -2,7 +2,8 @@ using System;
 using System.Text;
 using System.Net;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.IO;
 using XDM.Core.Util;
 using XDM.Core.HttpServer;
 using System.Threading;
@@ -87,7 +88,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnArgsMessage(RequestContext context)
         {
-            var args = JsonConvert.DeserializeObject<List<string>>(Encoding.UTF8.GetString(context.RequestBody!));
+            var args = JsonSerializer.Deserialize<List<string>>(Encoding.UTF8.GetString(context.RequestBody!));
             if (args == null || args.Count == 0)
             {
                 return;
@@ -97,7 +98,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnVideoDownloadMessage(RequestContext context)
         {
-            var msg = JsonConvert.DeserializeObject<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msg == null)
             {
                 return;
@@ -107,7 +108,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnTabUpdateMessage(RequestContext context)
         {
-            var msg = JsonConvert.DeserializeObject<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msg == null)
             {
                 return;
@@ -117,7 +118,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnDownloadMessage(RequestContext context)
         {
-            var msg = JsonConvert.DeserializeObject<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msg == null)
             {
                 return;
@@ -159,7 +160,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnMediaMessage(RequestContext context)
         {
-            var msg = JsonConvert.DeserializeObject<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msg = JsonSerializer.Deserialize<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msg == null)
             {
                 return;
@@ -179,7 +180,7 @@ namespace XDM.Core.BrowserMonitoring
 
         private void OnBatchMessage(RequestContext context)
         {
-            var msgArr = JsonConvert.DeserializeObject<ExtensionData[]>(Encoding.UTF8.GetString(context.RequestBody!));
+            var msgArr = JsonSerializer.Deserialize<ExtensionData[]>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msgArr == null)
             {
                 return;
@@ -301,111 +302,70 @@ namespace XDM.Core.BrowserMonitoring
         {
             try
             {
-                var w = new StringWriter();
-                using var writer = new JsonTextWriter(w);
-                writer.CloseOutput = false;
-                writer.Formatting = Formatting.None;
+                using var ms = new MemoryStream();
+                using var writer = new Utf8JsonWriter(ms);
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("enabled");
-                writer.WriteValue(Config.Instance.IsBrowserMonitoringEnabled);
+                writer.WriteBoolean("enabled", Config.Instance.IsBrowserMonitoringEnabled);
 
-                writer.WritePropertyName("fileExts");
-                writer.WriteStartArray();
+                writer.WriteStartArray("fileExts");
                 foreach (var ext in Config.Instance.FileExtensions)
-                {
-                    writer.WriteValue(ext);
-                }
+                    writer.WriteStringValue(ext);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("blockedHosts");
-                writer.WriteStartArray();
+                writer.WriteStartArray("blockedHosts");
                 foreach (var host in Config.Instance.BlockedHosts)
-                {
-                    writer.WriteValue(host);
-                }
+                    writer.WriteStringValue(host);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("requestFileExts");
-                writer.WriteStartArray();
+                writer.WriteStartArray("requestFileExts");
                 foreach (var ext in Config.Instance.VideoExtensions)
-                {
-                    writer.WriteValue(ext);
-                }
+                    writer.WriteStringValue(ext);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("mediaTypes");
-                writer.WriteStartArray();
-                foreach (var ext in new string[] { "audio/", "video/" })
-                {
-                    writer.WriteValue(ext);
-                }
+                writer.WriteStartArray("mediaTypes");
+                foreach (var ext in new[] { "audio/", "video/" })
+                    writer.WriteStringValue(ext);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("tabsWatcher");
-                writer.WriteStartArray();
-                foreach (var ext in new string[] { ".youtube.", "/watch?v=" })
-                {
-                    writer.WriteValue(ext);
-                }
+                writer.WriteStartArray("tabsWatcher");
+                foreach (var ext in new[] { ".youtube.", "/watch?v=" })
+                    writer.WriteStringValue(ext);
                 writer.WriteEndArray();
 
                 var videoList = ApplicationContext.VideoTracker.GetVideoList();
-
-                writer.WritePropertyName("videoList");
-                writer.WriteStartArray();
+                writer.WriteStartArray("videoList");
                 foreach (var video in videoList)
                 {
                     writer.WriteStartObject();
-
-                    writer.WritePropertyName("id");
-                    writer.WriteValue(video.ID);
-
-                    writer.WritePropertyName("text");
-                    writer.WriteValue(video.Name);
-
-                    writer.WritePropertyName("info");
-                    writer.WriteValue(video.Description);
-
-                    writer.WritePropertyName("tabId");
-                    writer.WriteValue(video.TabId);
-
+                    writer.WriteString("id", video.ID);
+                    writer.WriteString("text", video.Name);
+                    writer.WriteString("info", video.Description);
+                    writer.WriteString("tabId", video.TabId);
                     writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("matchingHosts");
-                writer.WriteStartArray();
-                foreach (var ext in new string[] { "googlevideo" })
-                {
-                    writer.WriteValue(ext);
-                }
+                writer.WriteStartArray("matchingHosts");
+                writer.WriteStringValue("googlevideo");
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("blockedMimeTypes");
-                writer.WriteStartArray();
+                writer.WriteStartArray("blockedMimeTypes");
                 foreach (var mime in Config.Instance.BlockedMimeTypes)
-                {
-                    writer.WriteValue(mime);
-                }
+                    writer.WriteStringValue(mime);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("blockedUrlPatterns");
-                writer.WriteStartArray();
+                writer.WriteStartArray("blockedUrlPatterns");
                 foreach (var pattern in Config.Instance.BlockedUrlPatterns)
-                {
-                    writer.WriteValue(pattern);
-                }
+                    writer.WriteStringValue(pattern);
                 writer.WriteEndArray();
 
-                writer.WritePropertyName("minDownloadSize");
-                writer.WriteValue(Config.Instance.MinDownloadSizeBytes);
+                writer.WriteNumber("minDownloadSize", Config.Instance.MinDownloadSizeBytes);
 
                 writer.WriteEndObject();
-                writer.Close();
-                var str = w.ToString();
-                return str;
+                writer.Flush();
+                return Encoding.UTF8.GetString(ms.ToArray());
             }
             catch (Exception ex)
             {

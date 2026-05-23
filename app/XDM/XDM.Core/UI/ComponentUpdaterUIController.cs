@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -149,7 +149,7 @@ namespace XDM.Core.UI
                     }
 
                     File.WriteAllText(Path.Combine(Config.AppDir, "ytdlp-update.json"),
-                        JsonConvert.SerializeObject(new UpdateHistory
+                        System.Text.Json.JsonSerializer.Serialize(new UpdateHistory
                         {
                             //FFmpegUpdateDate = DateTime.Now,
                             YoutubeDLUpdateDate = DateTime.Now

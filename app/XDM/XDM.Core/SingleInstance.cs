@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +38,7 @@ namespace XDM.Core
             {
                 Log.Debug("Sending to running instance...");
                 var args = Environment.GetCommandLineArgs().Skip(1);
-                var postData = JsonConvert.SerializeObject(args.Count() == 0 ? new string[] { "--restore-window" } : args);
+                var postData = JsonSerializer.Serialize(args.Count() == 0 ? new string[] { "--restore-window" } : args);
                 Log.Debug("Sending...");
                 var data = Encoding.UTF8.GetBytes(postData);
 

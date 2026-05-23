@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Gtk;
 using Application = Gtk.Application;
@@ -372,14 +372,15 @@ namespace XDM.GtkUI
             return button;
         }
 
+        private Label lblSpeedIndicator;
+
         private Widget CreateBottombar()
         {
             var hbox = new HBox(false, 10);
             hbox.Margin = 2;
             hbox.MarginStart = 5;
             hbox.MarginEnd = 5;
-            //var lblMonitoring = new Label { Text = TextResource.GetText("SETTINGS_MONITORING"), MarginBottom = 5 };
-            //hbox.PackStart(lblMonitoring, false, false, 0);
+
             btnMonitoring = new CheckButton { MarginStart = 5 };
             btnMonitoring.Clicked += BtnMonitoring_Clicked;
             hbox.PackStart(btnMonitoring, false, false, 0);
@@ -387,45 +388,70 @@ namespace XDM.GtkUI
             var lblMonitoring = new Label { Text = TextResource.GetText("SETTINGS_MONITORING") };
             hbox.PackStart(lblMonitoring, false, false, 0);
 
-            //var h1 = new HBox();
-            //h1.PackStart(new Image(LoadSvg("links-line", 14)), false, false, 0);
-            //h1.PackStart(new Label { Text = TextResource.GetText("DESC_Q_TITLE") }, false, false, 10);
-
             btnScheduler = CreateButtonWithContent("list-settings-fill", TextResource.GetText("DESC_Q_TITLE"));
             btnScheduler.Clicked += BtnScheduler_Clicked;
-            //new Button
-            //{
-            //    Label = TextResource.GetText("DESC_Q_TITLE"),
-            //    MarginBottom = 0,
-            //    Relief = ReliefStyle.None,
-            //    Valign = Align.Start,
-            //    Image = new Image(LoadSvg("list-settings-fill", 16)),
-            //    AlwaysShowImage = true,
-
-            //};
-            //btnScheduler.Add(h1);
-            //btnScheduler.Margin = 1;
             hbox.PackStart(btnScheduler, false, false, 0);
+
+            // Speed indicator (right-aligned)
+            lblSpeedIndicator = new Label
+            {
+                Text = "",
+                Xalign = 1.0f,
+                MarginEnd = 10
+            };
+            lblSpeedIndicator.StyleContext.AddClass("medium-font");
+            hbox.PackEnd(lblSpeedIndicator, false, false, 0);
 
             helpImage = new Image(LoadSvg("question-line", 16));
             helpLabel = new Label { Text = TextResource.GetText("LBL_SUPPORT_PAGE") };
             btnHelp = CreateButtonWithContent(helpImage, helpLabel);
             btnHelp.Clicked += BtnHelp_Clicked;
-            //btnHelp.Margin = 1;
-            //btnHelp.MarginEnd = 5;
-            //new Button
-            //{
-            //    Label = TextResource.GetText("LBL_SUPPORT_PAGE"),
-            //    MarginBottom = 0,
-            //    Relief = ReliefStyle.None,
-            //    Valign = Align.Start,
-            //    Image = new Image(LoadSvg("question-line", 16)),
-            //    AlwaysShowImage = true,
-            //};
             hbox.PackEnd(btnHelp, false, false, 0);
 
             hbox.ShowAll();
+
+            // Update speed indicator every 2 seconds
+            GLib.Timeout.Add(2000, () =>
+            {
+                UpdateSpeedIndicator();
+                return true;
+            });
+
             return hbox;
+        }
+
+        private void UpdateSpeedIndicator()
+        {
+            try
+            {
+                var downloads = GetAllInProgressDownloads();
+                var activeCount = 0;
+                var totalDisplay = "";
+                foreach (var dl in downloads)
+                {
+                    if (!string.IsNullOrEmpty(dl.DownloadSpeed) && dl.DownloadSpeed != "---")
+                    {
+                        activeCount++;
+                        totalDisplay = dl.DownloadSpeed; // Show last active speed
+                    }
+                }
+                if (activeCount == 0)
+                {
+                    lblSpeedIndicator.Text = "";
+                }
+                else if (activeCount == 1)
+                {
+                    lblSpeedIndicator.Text = $"⬇ {totalDisplay}";
+                }
+                else
+                {
+                    lblSpeedIndicator.Text = $"⬇ {activeCount} active downloads";
+                }
+            }
+            catch
+            {
+                lblSpeedIndicator.Text = "";
+            }
         }
 
         private void BtnHelp_Clicked(object? sender, EventArgs e)
@@ -442,9 +468,6 @@ namespace XDM.GtkUI
 
         private void BtnScheduler_Clicked(object? sender, EventArgs e)
         {
-            //using var dlg = QueueSchedulerDialog.CreateFromGladeFile(this, this.windowGroup);
-            //dlg.Run();
-            //dlg.Destroy();
             this.SchedulerClicked?.Invoke(sender, e);
         }
 
@@ -642,7 +665,7 @@ namespace XDM.GtkUI
 
             sortedStore.SetSortFunc(0, (model, iter1, iter2) =>
             {
-                Console.WriteLine("called");
+
                 var t1 = (string)model.GetValue(iter1, 0);
                 var t2 = (string)model.GetValue(iter2, 0);
                 if (t1 == null && t2 == null) return 0;
